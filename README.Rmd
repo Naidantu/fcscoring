@@ -1,0 +1,86 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "70%"
+)
+```
+
+# fcscoring
+
+The goal of fcscoring is to estimate the Generalized Thurstonian Unfolding Model (GTUM) using Bayesian method. Below are some important features of the fcscoring package:
+
+1. Essentially can handle FC scales with any block sizes and any number of response options. It is supposed to be as flexible as the Thurstonian IRT model.
+2. Automatically deals with missing data in a way similar to how full information maximum likelihood handles missing data. 
+3. Dimensions are allowed to correlate and the correlations are estimated.
+4. Functions (i.e., fcscoring( ), extract( ), and bayesplot( )) are provided for model estimation, results extraction, and Bayesian diagnostic plottings, respectively. 
+
+## Installation
+
+You can install the development version of fcscoring from GitHub:
+
+``` r
+devtools::install_github("Naidantu/fcscoring")
+```
+
+## Example
+
+This is a basic example which shows you how to prepare data, fit the model, extract and plot results:
+
+```{r example}
+
+library(fcscoring)
+
+## basic example code
+## Step 1: Input data
+# 1.1 Response data in wide format. 
+gtum.Data <- c(1,5,2,3,1,2,1,5,3,1,1,1,4,1,4,4,3,2,2,3)
+gtum.Data <- matrix(gtum.Data,nrow = 5)
+gtum.Data
+
+# 1.2 A two-column matrix mapping each statement to each trait. 
+# The first row [1,2] means that the first statement in the first pair measures trait 1 and the second statement measures trait 2;
+# Similarly, the second row [1,3] means that the first statement in the second pair measures trait 1 and the second statement measures trait 3.
+# Please note that the number of rows in "ind" equals the total number of pairs. 
+ind <- matrix(c(1, 1, 1, 1, 2, 3, 2, 5), ncol = 2)
+
+# 1.3 A two-column matrix specifying the directions or positivity/negativity of the statements. 
+ParInits <- matrix(c(-1, -1, -1, 1, -1, -1, -1, 1), ncol = 2)
+ParInits
+
+# Please note that if the original test format is triplets, a pairmap file that specifies the rank/ID of the statement in each trait it measures. For example, suppose there are 3 statements measuring each trait. 1 means the statement is the first statement measuring the trait and 3 means the statement is the last statement measuring the trait.
+
+## Step 2: Fit the model
+mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=2, ParInits=ParInits, iter=500)
+
+## Step 3: Extract the estimated results 
+# 3.1 Extract the theta estimates 
+theta <- extract(x=mod, pars='theta')
+# Turn the theta estimates into p*trait matrix where p equals sample size and trait equals the number of latent traits
+theta <- theta[,1]
+# nrow=trait
+theta <- matrix(theta, nrow=5)  
+theta <- t(theta)
+# theta estimates in p*trait matrix format
+theta
+# 3.2 Extract the tau estimates
+tau <- extract(x=mod, pars='tau')
+tau <- tau[,1]
+tau
+#3.3 Extract the estimates of the correlations among dimensions
+cor <- extract(x=mod, pars='cor')
+
+## Step 4: Plottings
+# 4.1 Obtain the density plots for alpha
+bayesplot(x=mod, pars='alpha', plot='density', inc_warmup=FALSE)
+# 4.2 Obtain the trace plots for alpha
+bayesplot(x=mod, pars='alpha', plot='trace', inc_warmup=FALSE)
+```
