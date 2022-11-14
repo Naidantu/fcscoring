@@ -42,6 +42,8 @@ data {
   real va;
   real mt;
   real vt;
+  real mb;
+  real vb;
   }
 
 parameters {
@@ -96,7 +98,7 @@ model {
 
     L_Omega ~ lkj_corr_cholesky(1);
     alpha_raw ~  lognormal(ma,va);
-    randomblock_var ~ lognormal(0,1);
+    randomblock_var ~ lognormal(mb,vb);
 
     for (i in 1:Items){
     tau[i,] ~ normal(mt,vt);
