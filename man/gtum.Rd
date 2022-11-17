@@ -18,31 +18,29 @@ gtum(
   thin = 1,
   cores = 2,
   ma = 0.2,
-  va = 0.5,
+  va = 1,
   mt = 0,
-  vt = 2,
-  ma_t = 0.2,
-  va_t = 1,
-  mt_t = 0,
-  vt_t = 3,
-  mdne = 0.7,
-  vdne = 0.2,
-  mdnu = 0.5,
-  vdnu = 0.1,
-  mdpo = 0.3,
-  vdpo = 0.2
+  vt = 3,
+  mdne = -2,
+  vdne = 2,
+  mdnu = 0,
+  vdnu = 2,
+  mdpo = 2,
+  vdpo = 2,
+  mb = 0,
+  vb = 1
 )
 }
 \arguments{
-\item{gtum.Data}{Response data in wide format. For dichotomous forced choice data, if the first statement is preferred, the data should be coded as 1, otherwise it should be coded as 2. For polytomous forced choice data, the data should be coded as the response option endorsed.}
+\item{gtum.Data}{Response data in wide format (each row represents a person). If the original block size is three or more, then users need to first decompose the original responses into several pairwise comparisons and use the pairwise comparison data as input here. For example, if the original test has 3 blocks and each block contains statements A, B, and C, then the input data should have 9 columns (A1B1, A1C1, B1C1, A2B2, A2C2, B2C2, A3B3, A3C3, B3C3) where 1 means the first statement within the pair is preferred and 2 means the second statement within the pair is preferred. For graded preference forced-choice design, the data should be coded as the response option endorsed (e.g., 1= Statement A is much more like me; 2= Statement A is slightly more like me; 3= Statement B is slightly more like me; 4= Statement B is much more like me).}
 
-\item{ind}{A two-column matrix mapping each statement to each trait. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.}
+\item{ind}{A two-column matrix mapping each statement to each trait in the pair format. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.}
 
-\item{ParInits}{A two-column or three column (depending on the block size) matrix specifying the directions or positivity/negativity of the statements in each pair. 1 means the statement is positive, -1 means the statement is negative, and 0 means the statement is neutral(intermediate items). For example, matrix(c(1, 1, 1, -1, -1, -1), ncol = 2) means that for each pair, the first statement is positive and the second statement is negative.}
+\item{ParInits}{A three-column matrix containing initial values for the statement parameters block by block. 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.}
 
 \item{block}{The number of statements in each block in the original test. For now, it can be 2 or 3. We will further expand the code to incorporate bigger blocks.}
 
-\item{pairmap}{A two-column matrix specifying the rank/ID of the statement in each trait it measures. For example, suppose there are 3 statements measuring each trait. 1 means the statement is the first statement measuring the trait and 3 means the statement is the last statement measuring the trait.}
+\item{pairmap}{A two-column matrix specifying the ID of statements within each trait. The row of this matrix equals to the total number of pairwise comparisons. For example, for a 20-block tests with 3 statements per block, there will be 20*(3*(3-1)/2) = 60 pairwise comparisons. Suppose there are 12 statements measuring each trait. Then 1 means the statement is the first statement measuring the trait and 12 means the statement is the twelfth statement measuring the trait.}
 
 \item{covariate}{An p*c person covariate matrix where p equals sample size and c equals the number of covariates. The default is NULL, meaning no person covariate.}
 
@@ -58,33 +56,29 @@ gtum(
 
 \item{cores}{The number of computer cores used for parallel computing. The default value is 2.}
 
-\item{ma}{Mean of the prior distribution for alphas for block of 2 in the original test, which follows a lognormal distribution. The default value is 0.2.}
+\item{ma}{Mean of the prior distribution for alphas, which follows a lognormal distribution. The default value is 0.2.}
 
-\item{va}{Standard deviation of the prior distribution for alpha for block of 2 in the original test. The default value is 0.5.}
+\item{va}{Standard deviation of the prior distribution for alpha. The default value is 1.}
 
-\item{mt}{Means of the prior distributions for taus for block of 2 in the original test, which follows a normal distribution. The default values is 0.}
+\item{mt}{Means of the prior distributions for taus, which follows a normal distribution. The default values is 0.}
 
-\item{vt}{Standard deviation of the prior distribution for taus for block of 2 in the original test. The default value is 2.}
+\item{vt}{Standard deviation of the prior distribution for taus. The default value is 3.}
 
-\item{ma_t}{Mean of the prior distribution for alphas for block of 3 in the original test, which follows a lognormal distribution. The default value is 0.2.}
+\item{mdne}{Mean of the prior distribution for the location parameters (delta) of negative items. For example, the item “I am often lazy” as an indicator of conscientiousness should have a negative location parameter (e.g., -2.5). Location parameters are on the same scale (z score) as the latent trait scores. We assume a normal prior for the location parameters and fix the range of negative location parameters between -10 and 0. The default value is -2.}
 
-\item{va_t}{Standard deviation of the prior distribution for alpha for block of 3 in the original test. The default value is 1.}
+\item{vdne}{Standard deviation of the prior distribution for negative deltas. The default value is 2.}
 
-\item{mt_t}{Means of the prior distributions for taus for block of 3 in the original test, which follows a normal distribution. The default values is 0.}
+\item{mdnu}{Mean of the prior distribution for the location parameters (delta) of neutral (intermediate) items. For example, the item “I as productive as an average person” as an indicator of conscientiousness should have a location parameter close to zero. We fix the range of location parameters of neutral items between -10 and 10 as we are not sure whether they are slightly positive or slightly negative. The default value is 0.}
 
-\item{vt_t}{Standard deviation of the prior distribution for taus for block of 3 in the original test. The default value is 3.}
+\item{vdnu}{Standard deviation of the prior distribution for negative deltas. The default value is 2.}
 
-\item{mdne}{Mean of the prior distribution for negative deltas for block of 2/3 in the original test, which follows a normal distribution. The default value is 0.7.}
+\item{mdpo}{Mean of the prior distribution for the location parameters (delta) of positive items. For example, the item “I very hardworking” as an indicator of conscientiousness should have a positive location parameter (e.g., 2.5). We fix the range of location parameters of positive items between 0 and 10.  The default value is 2.}
 
-\item{vdne}{Standard deviation of the prior distribution for negative deltas for block of 2/3 in the original test. The default value is 0.2.}
+\item{vdpo}{Standard deviation of the prior distribution for positive deltas. The default value is 2.}
 
-\item{mdnu}{Mean of the prior distribution for neutral deltas for block of 2/3 in the original test, which follows a normal distribution. The default value is 0.5.}
+\item{mb}{Means of the prior distributions for the random block factor. The default values is 0.}
 
-\item{vdnu}{Standard deviation of the prior distribution for neutral deltas for block of 2/3 in the original test. The default value is 0.1.}
-
-\item{mdpo}{Mean of the prior distribution for positive deltas for block of 2/3 in the original test, which follows a normal distribution. The default value is 0.3.}
-
-\item{vdpo}{Standard deviation of the prior distribution for positive deltas for block of 2/3 in the original test. The default value is 0.2.}
+\item{vb}{Standard deviation of the prior distribution for the random block factor. The default value is 1.}
 }
 \value{
 Result object that stores information including the (1) stanfit object, (2) estimated item parameters, (3) estimated person parameters, (4) response data, and (5) the input column vector mapping each statement to each trait.

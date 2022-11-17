@@ -1,8 +1,8 @@
 #' @title Generalized Thurstonian Unfolding Model estimation
 #' @description This function implements full Bayesian estimation of the Generalized Thurstonian Unfolding Model using rstan
 #' @param gtum.Data Response data in wide format (each row represents a person). If the original block size is three or more, then users need to first decompose the original responses into several pairwise comparisons and use the pairwise comparison data as input here. For example, if the original test has 3 blocks and each block contains statements A, B, and C, then the input data should have 9 columns (A1B1, A1C1, B1C1, A2B2, A2C2, B2C2, A3B3, A3C3, B3C3) where 1 means the first statement within the pair is preferred and 2 means the second statement within the pair is preferred. For graded preference forced-choice design, the data should be coded as the response option endorsed (e.g., 1= Statement A is much more like me; 2= Statement A is slightly more like me; 3= Statement B is slightly more like me; 4= Statement B is much more like me).
-#' @param ind A two-column matrix mapping each statement to each trait. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.
-#' @param ParInits A three-column matrix containing initial values for the three statement parameters block by block. 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.
+#' @param ind A two-column matrix mapping each statement to each trait in the pair format. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.
+#' @param ParInits A three-column matrix containing initial values for the statement parameters block by block. 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.
 #' @param block The number of statements in each block in the original test. For now, it can be 2 or 3. We will further expand the code to incorporate bigger blocks.
 #' @param pairmap A two-column matrix specifying the ID of statements within each trait. The row of this matrix equals to the total number of pairwise comparisons. For example, for a 20-block tests with 3 statements per block, there will be 20*(3*(3-1)/2) = 60 pairwise comparisons. Suppose there are 12 statements measuring each trait. Then 1 means the statement is the first statement measuring the trait and 12 means the statement is the twelfth statement measuring the trait.
 #' @param covariate An p*c person covariate matrix where p equals sample size and c equals the number of covariates. The default is NULL, meaning no person covariate.
@@ -58,7 +58,8 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
       Data<-suppressWarnings(edstan::irt_data(response_matrix =gtum.Data))
 
       #Delta.Ind.0 <- c(ParInits[,1],ParInits[,2])   #Statements in pair format are estimated column by column
-      Delta.Ind.0 <- as.matrix(ParInits[,2])    #Statements in pair format are estimated block by block
+      #Delta.Ind.0 <- as.matrix(ParInits[,2])    #Statements in pair format are estimated block by block
+      Delta.Ind.0 <- c(t(matrix(ParInits[,2], nrow = 2))[,1], t(matrix(ParInits[,2], nrow = 2))[,2])
       Delta.Ind <- Delta.upper <- Delta.lower <- Delta.Std<- numeric(Data$I*2)
 
       #initial values
@@ -98,7 +99,7 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
                         II=Data$ii,
                         JJ=Data$jj,
                         Trait = max(ind),
-                        INDEX  = c(ind1),
+                        INDEX  = c(ind1[,1], ind1[,2]),
                         Delta_lower = Delta.lower,
                         Delta_upper = Delta.upper,
                         Delta_Ind = Delta.Ind,

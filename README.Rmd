@@ -44,30 +44,96 @@ devtools::install_github("Naidantu/fcscoring")
 
 ## Example
 
-This is a basic example which shows you how to prepare data, fit the model, extract and plot results:
+**Example 1. dichotomous forced choice pairs**
+
+```{r echo=FALSE}
+## Simulate response data for a 60-statement forced choice test measuring 5 trait from 50 respondents
+N.Items = 60          # No. of unique statements
+N.Trait = 5          # No. of latent traits
+N.Obs = 50     # Sample size
+Options = 2        # No. of response options
+Correlation = 0.3  # Correlations among latent factors
+Diff = 0.5               # Difference in location parameters between matched-pairs
+Disc = 1          # Item discrimination parameters
+
+fc.pair.1 <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
+                          statement2 = c(2,3,2,5,3,4,
+                                         3,1,5,4,3,4,
+                                         5,4,4,5,2,1,
+                                         1,5,2,5,1,3,
+                                         2,2,4,1,1,3),
+                          delta1 = rep(seq(-2,2,length.out=6),5),
+                          delta2 = (rep(seq(-2,2,length.out=6),5)+rep(c(-1*Diff, Diff),15)),
+                          alpha1 = runif(30,(Disc-0.25),(Disc+0.25)),
+                          alpha2 = runif(30,(Disc-0.25),(Disc+0.25)))
+
+sigma <- matrix(Correlation,N.Trait,N.Trait)
+diag(sigma) <- 1
+theta <- MASS::mvrnorm(n = N.Obs,mu = rep(0,N.Trait), Sigma = sigma,empirical = T)
+
+DIF.UTILITY <- function(theta,fc.pair){
+  
+  samplesize <- dim(theta)[1]
+  pair <- dim(fc.pair)[1]
+  dif.utility <- matrix(NA,nrow = samplesize,ncol = pair)
+  
+  for (j in 1:samplesize) {
+    for (i in 1:pair) {
+      t1 <- -1*abs(theta[j,fc.pair[i,1]]-fc.pair[i,3])*fc.pair[i,5]
+      t2 <- -1*abs(theta[j,fc.pair[i,2]]-fc.pair[i,4])*fc.pair[i,6]
+      dif.utility[j,i] <- (t1-t2)
+    }
+  }
+  return(dif.utility)
+}
+
+dif.utility <- DIF.UTILITY(theta = theta,fc.pair = fc.pair.1)
+
+response <- matrix(NA,nrow = N.Obs,ncol = 30)
+THRESHOLD <- matrix(NA,nrow = 30,ncol = Options-1)
+
+  for (i in 1:30){
+    THRESHOLD[i,] <- runif(1,-1.5,1.5)
+  }
+  
+  for (i in 1:N.Obs) {
+    for (j in 1:30) {
+      
+      Prob0.1 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,1]) 
+      
+      Prob.0 <- c(1-Prob0.1,Prob0.1)
+      
+      response[i,j] <- sample(x = c(1:2),size = 1,prob = Prob.0)    
+      
+    }
+  }
+```
 
 ```{r example}
-
 library(fcscoring)
 
-## basic example code
-## Step 1: Input data
-# 1.1 Response data in wide format. 
-gtum.Data <- c(1,5,2,3,1,2,1,5,3,1,1,1,4,1,4,4,3,2,2,3)
-gtum.Data <- matrix(gtum.Data,nrow = 5)
-gtum.Data
+## Step 1: Read data
+# 1.1 Response data in wide format for a 60-statement forced choice test measuring 5 trait from 50 respondents
+gtum.Data <- response
+#first 10 respondents' response
+gtum.Data[1:10,]
 
 # 1.2 A two-column matrix mapping each statement to each trait. 
 # The first row [1,2] means that the first statement in the first pair measures trait 1 and the second statement measures trait 2;
 # Similarly, the second row [1,3] means that the first statement in the second pair measures trait 1 and the second statement measures trait 3.
 # Please note that the number of rows in "ind" equals the total number of pairs. 
-ind <- matrix(c(1, 1, 1, 1, 2, 3, 2, 5), ncol = 2)
+ind <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
+                          statement2 = c(2,3,2,5,3,4,
+                                         3,1,5,4,3,4,
+                                         5,4,4,5,2,1,
+                                         1,5,2,5,1,3,
+                                         2,2,4,1,1,3))
+ind
 
-# 1.3 A two-column matrix specifying the directions or positivity/negativity of the statements. 
-ParInits <- matrix(c(-1, -1, -1, 1, -1, -1, -1, 1), ncol = 2)
+# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
+# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), rep(-1,60)), ncol = 3)
 ParInits
-
-# Please note that if the original test format is triplets, a pairmap file that specifies the rank/ID of the statement in each trait it measures. For example, suppose there are 3 statements measuring each trait. 1 means the statement is the first statement measuring the trait and 3 means the statement is the last statement measuring the trait.
 
 ## Step 2: Fit the model
 mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=2, ParInits=ParInits, iter=500)
@@ -81,7 +147,8 @@ theta <- theta[,1]
 theta <- matrix(theta, nrow=5)  
 theta <- t(theta)
 # theta estimates in p*trait matrix format
-theta
+#first 10 respondents' thetas
+theta[1:10,]
 # 3.2 Extract the tau estimates
 tau <- extract(x=mod, pars='tau')
 tau <- tau[,1]
@@ -90,8 +157,312 @@ tau
 cor <- extract(x=mod, pars='cor')
 
 ## Step 4: Plottings
-# 4.1 Obtain the density plots for alpha
-bayesplot(x=mod, pars='alpha', plot='density', inc_warmup=FALSE)
-# 4.2 Obtain the trace plots for alpha
-bayesplot(x=mod, pars='alpha', plot='trace', inc_warmup=FALSE)
+# 4.1 Obtain the density plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='density', inc_warmup=FALSE)
+# 4.2 Obtain the trace plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='trace', inc_warmup=FALSE)
+```
+
+
+
+**Example 2. polytomous forced choice pairs**
+
+```{r echo=FALSE}
+## Simulate response data for a 60-statement forced choice test measuring 5 trait from 50 respondents
+N.Items = 60          # No. of unique statements
+N.Trait = 5          # No. of latent traits
+N.Obs = 50     # Sample size
+Options = 5        # No. of response options
+Correlation = 0.3  # Correlations among latent factors
+Diff = 0.5               # Difference in location parameters between matched-pairs
+Disc = 1          # Item discrimination parameters
+
+fc.pair.1 <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
+                          statement2 = c(2,3,2,5,3,4,
+                                         3,1,5,4,3,4,
+                                         5,4,4,5,2,1,
+                                         1,5,2,5,1,3,
+                                         2,2,4,1,1,3),
+                          delta1 = rep(seq(-2,2,length.out=6),5),
+                          delta2 = (rep(seq(-2,2,length.out=6),5)+rep(c(-1*Diff, Diff),15)),
+                          alpha1 = runif(30,(Disc-0.25),(Disc+0.25)),
+                          alpha2 = runif(30,(Disc-0.25),(Disc+0.25)))
+
+sigma <- matrix(Correlation,N.Trait,N.Trait)
+diag(sigma) <- 1
+theta <- MASS::mvrnorm(n = N.Obs,mu = rep(0,N.Trait), Sigma = sigma,empirical = T)
+
+DIF.UTILITY <- function(theta,fc.pair){
+  
+  samplesize <- dim(theta)[1]
+  pair <- dim(fc.pair)[1]
+  dif.utility <- matrix(NA,nrow = samplesize,ncol = pair)
+  
+  for (j in 1:samplesize) {
+    for (i in 1:pair) {
+      t1 <- -1*abs(theta[j,fc.pair[i,1]]-fc.pair[i,3])*fc.pair[i,5]
+      t2 <- -1*abs(theta[j,fc.pair[i,2]]-fc.pair[i,4])*fc.pair[i,6]
+      dif.utility[j,i] <- (t1-t2)
+    }
+  }
+  return(dif.utility)
+}
+
+dif.utility <- DIF.UTILITY(theta = theta,fc.pair = fc.pair.1)
+
+response <- matrix(NA,nrow = N.Obs,ncol = 30)
+THRESHOLD <- matrix(NA,nrow = 30,ncol = Options-1)
+
+for (i in 1:30){
+    THRESHOLD[i,] <- c(-1.5+rnorm(1,0,0.1),-0.75+rnorm(1,0,0.1),0.75+rnorm(1,0,0.1),1.5+rnorm(1,0,0.1))
+  }
+  
+  for (i in 1:N.Obs) {
+    for (j in 1:30) {
+      
+      Prob0.1 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,1]) 
+      Prob0.2 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,2])
+      Prob0.3 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,3]) 
+      Prob0.4 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,4]) 
+      Prob.0 <- c(1-Prob0.1,(Prob0.1-Prob0.2),(Prob0.2-Prob0.3),(Prob0.3-Prob0.4),(Prob0.4))
+      response[i,j] <- sample(x = c(1:5),size = 1,prob = Prob.0)    
+    }
+  }
+```
+
+```{r example 2}
+library(fcscoring)
+
+## Step 1: Read data
+# 1.1 Response data in wide format for a 60-statement forced choice test measuring 5 trait from 50 respondents
+gtum.Data <- response
+#first 10 respondents' response
+gtum.Data[1:10,]
+
+# 1.2 A two-column matrix mapping each statement to each trait. 
+# The first row [1,2] means that the first statement in the first pair measures trait 1 and the second statement measures trait 2;
+# Similarly, the second row [1,3] means that the first statement in the second pair measures trait 1 and the second statement measures trait 3.
+# Please note that the number of rows in "ind" equals the total number of pairs. 
+ind <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
+                          statement2 = c(2,3,2,5,3,4,
+                                         3,1,5,4,3,4,
+                                         5,4,4,5,2,1,
+                                         1,5,2,5,1,3,
+                                         2,2,4,1,1,3))
+ind
+
+# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
+# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), rep(-1,60)), ncol = 3)
+ParInits
+
+## Step 2: Fit the model
+mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=2, ParInits=ParInits, iter=500)
+
+## Step 3: Extract the estimated results 
+# 3.1 Extract the theta estimates 
+theta <- extract(x=mod, pars='theta')
+# Turn the theta estimates into p*trait matrix where p equals sample size and trait equals the number of latent traits
+theta <- theta[,1]
+# nrow=trait
+theta <- matrix(theta, nrow=5)  
+theta <- t(theta)
+# theta estimates in p*trait matrix format
+#first 10 respondents' thetas
+theta[1:10,]
+# 3.2 Extract the tau estimates
+tau <- extract(x=mod, pars='tau')
+tau <- tau[,1]
+# nrow=response option-1
+tau <- matrix(tau, nrow=4)  
+tau <- t(tau)
+tau
+#3.3 Extract the estimates of the correlations among dimensions
+cor <- extract(x=mod, pars='cor')
+
+## Step 4: Plottings
+# 4.1 Obtain the density plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='density', inc_warmup=FALSE)
+# 4.2 Obtain the trace plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='trace', inc_warmup=FALSE)
+```
+
+
+
+**Example 3. dichotomous forced choice triplets recoded into pairs**
+
+```{r echo=FALSE}
+## Simulate response data for a 60-statement forced choice test measuring 5 trait from 50 respondents
+N.Items = 60          # No. of unique statements
+N.Trait = 5          # No. of latent traits
+N.Obs = 50     # Sample size
+Options = 2        # No. of response options
+Correlation = 0.3  # Correlations among latent factors
+Diff = 0.5               # Difference in location parameters between matched-pairs
+Disc = 1          # Item discrimination parameters
+Randomblock = 1
+
+statement.par <- data.frame(dimen = rep(1:5,each=12),
+                            iteno = rep(1:12,5),
+                            alpha = c(runif(12,(Disc-0.25),(Disc+0.25)),runif(12,(Disc-0.25),(Disc+0.25)),
+                                      runif(12,(Disc-0.25),(Disc+0.25)),runif(12,(Disc-0.25),(Disc+0.25)),
+                                      runif(12,(Disc-0.25),(Disc+0.25))))
+
+fc.pair <- data.frame(block = c(1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7,8,8,8,9,9,9,10,10,10,
+                                  11,11,11,12,12,12,13,13,13,14,14,14,15,15,15,16,16,16,17,17,17,18,18,18,19,19,19,20,20,20),
+                        pairs = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
+                                  31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60),
+                        ino.1 = c(1,1,1,1,1,1,2,2,2,2,2,3,3,3,4,4,4,4,5,5,5,4,4,5,6,6,6,5,5,7,8,8,6,8,8,7,9,9,9,8,8,8,10,10,9,9,9,11,10,10,10,11,11,11,12,12,11,12,12,12),
+                        ino.2 = c(1,1,1,1,2,2,2,2,2,3,3,3,4,3,3,4,3,3,5,4,4,5,6,6,6,5,5,7,7,7,6,6,6,7,7,7,9,7,7,8,8,8,9,10,10,11,9,9,10,10,10,11,11,11,11,12,12,12,12,12),
+                        dim.1 = c(1,1,2,3,3,4,5,5,2,4,4,5,3,3,1,5,5,2,2,2,1,4,4,5,5,5,1,4,4,1,2,2,3,1,1,3,2,2,1,3,3,4,2,2,5,4,4,1,4,4,3,3,3,2,5,5,4,4,4,3),
+                        dim.2 = c(2,5,5,4,1,1,2,3,3,5,1,1,1,2,2,2,4,4,1,3,3,5,2,2,1,3,3,1,2,2,3,4,4,3,5,5,1,4,4,4,5,5,5,1,1,1,3,3,3,5,5,2,5,5,4,1,1,3,2,2),
+                        alpha.1 = rep(NA,60),
+                        alpha.2 = rep(NA,60),
+                        delta.1 = c(-2.5,-2.5,-2.25,-2.25,-2.25,-2.5,-2,-2,-2.25,-1.75,-1.75,-1.5,
+                                    -1.5,-1.5,-1.75,-1.25,-1.25,-1,-1,-1,-1.25,-0.75,-0.75,-0.50,
+                                    -0.5,-0.5,-0.75,-0.25,-0.25,0,0,0,0.25,0.25,0.25,0.5,0.5,0.5,
+                                    0.75,0.75,0.75,0.5,1,1,0.75,1.25,1.25,1.5,1.5,1.5,1.75,1.75,
+                                    1.75,2,2,2,2.25,2.5,2.5,2.25),
+                        delta.2 = c(-2.25,-2.5,-2.5,-2.5,-2.25,-2.25,-2.25,-2,-2,-1.5,-1.75,-1.75,
+                                    -1.75,-1.5,-1.5,-1,-1.25,-1.25,-1.25,-1,-1,-0.5,-0.75,-0.75,-0.75,
+                                    -0.5,-0.5,0,-0.25,-0.25,0.25,0,0,0.5,0.25,0.25,0.75,0.5,0.5,0.5,0.75,
+                                    0.75,0.75,1,1,1.5,1.25,1.25,1.75,1.5,1.5,2,1.75,1.75,2.25,2,2,2.25,2.5,2.5))
+
+for (i in 1:60) {
+
+  itemno.1 <- fc.pair[i,"ino.1"]
+  dimens.1 <- fc.pair[i,"dim.1"]
+
+  itemno.2 <- fc.pair[i,"ino.2"]
+  dimens.2 <- fc.pair[i,"dim.2"]
+
+  fc.pair[i,"alpha.1"] <- subset(statement.par,iteno==itemno.1 & dimen == dimens.1)[,"alpha"]
+  fc.pair[i,"alpha.2"] <- subset(statement.par,iteno==itemno.2 & dimen == dimens.2)[,"alpha"]
+
+}
+
+item.order <- matrix(NA,60,4)
+
+for (i in 1:20) {
+
+  item.order[(i-1)*3+1,1] <- fc.pair[(i-1)*3+1,"dim.1"]
+  item.order[(i-1)*3+2,1] <- fc.pair[(i-1)*3+1,"dim.2"]
+  item.order[(i-1)*3+3,1] <- fc.pair[(i-1)*3+2,"dim.2"]
+
+  item.order[(i-1)*3+1,2] <- fc.pair[(i-1)*3+1,"ino.1"]
+  item.order[(i-1)*3+2,2] <- fc.pair[(i-1)*3+1,"ino.2"]
+  item.order[(i-1)*3+3,2] <- fc.pair[(i-1)*3+2,"ino.2"]
+
+  item.order[(i-1)*3+1,3] <- fc.pair[(i-1)*3+1,"alpha.1"]
+  item.order[(i-1)*3+2,3] <- fc.pair[(i-1)*3+1,"alpha.2"]
+  item.order[(i-1)*3+3,3] <- fc.pair[(i-1)*3+2,"alpha.2"]
+
+  item.order[(i-1)*3+1,4] <- fc.pair[(i-1)*3+1,"delta.1"]
+  item.order[(i-1)*3+2,4] <- fc.pair[(i-1)*3+1,"delta.2"]
+  item.order[(i-1)*3+3,4] <- fc.pair[(i-1)*3+2,"delta.2"]
+}
+
+colnames(item.order) <- c("dimen","iteno","alpha","delta")
+
+item.order <- as.data.frame(item.order)
+
+sigma <- matrix(Correlation,N.Trait,N.Trait)
+diag(sigma) <- 1
+theta <- MASS::mvrnorm(n = N.Obs,mu = rep(0,N.Trait), Sigma = sigma,empirical = T)
+
+DIF.UTILITY <- function(theta,fc.pair,randomblock){
+
+  samplesize <- dim(theta)[1]
+  pair <- dim(fc.pair)[1]
+  dif.utility <- matrix(NA,nrow = samplesize,ncol = pair)
+  randomblock <- matrix(rnorm(n = samplesize*max(fc.pair$block),mean = 0,sd = Randomblock),nrow = samplesize,ncol = max(fc.pair$block))
+
+  for (j in 1:samplesize) {
+    for (i in 1:pair) {
+      t1 <- -1*abs(theta[j,fc.pair[i,"dim.1"]]-fc.pair[i,"delta.1"])*fc.pair[i,"alpha.1"]
+      t2 <- -1*abs(theta[j,fc.pair[i,"dim.2"]]-fc.pair[i,"delta.2"])*fc.pair[i,"alpha.2"]
+      dif.utility[j,i] <- (t1-t2) + randomblock[j,fc.pair[i,"block"]]
+    }
+  }
+
+  return(dif.utility)
+}
+
+dif.utility <- DIF.UTILITY(theta = theta,fc.pair = fc.pair,randomblock = randomblock)
+
+## Step 9. Categorize data
+
+response <- matrix(NA,nrow = N.Obs,ncol = 60)
+THRESHOLD <- matrix(NA,nrow = 60,ncol = Options-1)
+
+for (i in 1:60){THRESHOLD[i,] <- runif(1,-1.5,1.5)
+  }
+
+  for (i in 1:N.Obs) {
+    for (j in 1:60) {
+
+      Prob0.1 <- boot::inv.logit(dif.utility[i,j]- THRESHOLD[j,1])
+
+      Prob.0 <- c(1-Prob0.1,Prob0.1)
+
+      response[i,j] <- sample(x = c(1:2),size = 1,prob = Prob.0)
+    }
+  }
+```
+
+```{r example 3}
+library(fcscoring)
+
+## Step 1: Read data
+# 1.1 Response data in wide format for a 60-statement forced choice test measuring 5 trait from 50 respondents
+gtum.Data <- response
+#first 10 respondents' response
+gtum.Data[1:10,]
+
+# 1.2 A two-column matrix mapping each statement to each trait in the recoded pairs
+# The first row [1,2] means that the first statement in the first pair measures trait 1 and the second statement measures trait 2;
+# Similarly, the second row [1,3] means that the first statement in the second pair measures trait 1 and the second statement measures trait 3.
+# Please note that the number of rows in "ind" equals the total number of pairs. 
+ind <- data.frame(dim.1 = c(1,1,2,3,3,4,5,5,2,4,4,5,3,3,1,5,5,2,2,2,1,4,4,5,5,5,1,4,4,1,2,2,3,1,1,3,2,2,1,3,3,4,2,2,5,4,4,1,4,4,3,3,3,2,5,5,4,4,4,3),
+                  dim.2 = c(2,5,5,4,1,1,2,3,3,5,1,1,1,2,2,2,4,4,1,3,3,5,2,2,1,3,3,1,2,2,3,4,4,3,5,5,1,4,4,4,5,5,5,1,1,1,3,3,3,5,5,2,5,5,4,1,1,3,2,2))
+ind
+
+# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
+# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), c(rep(-1,30),rep(1,30)), rep(-1,60)), ncol = 3)
+ParInits
+
+# Please note that if the original test format is triplets, a pairmap file that specifies the rank/ID of the statement in each trait it measures for the recoded pair format. For example, suppose there are 3 statements measuring each trait. 1 means the statement is the first statement measuring the trait and 3 means the statement is the last statement measuring the trait.
+
+# 1.4 A two-column matrix specifying the ID of statements within each trait. The row of this matrix equals to the total number of pairwise comparisons. 
+pairmap <- data.frame(ino.1 = c(1,1,1,1,1,1,2,2,2,2,2,3,3,3,4,4,4,4,5,5,5,4,4,5,6,6,6,5,5,7,8,8,6,8,8,7,9,9,9,8,8,8,10,10,9,9,9,11,10,10,10,11,11,11,12,12,11,12,12,12),
+                        ino.2 = c(1,1,1,1,2,2,2,2,2,3,3,3,4,3,3,4,3,3,5,4,4,5,6,6,6,5,5,7,7,7,6,6,6,7,7,7,9,7,7,8,8,8,9,10,10,11,9,9,10,10,10,11,11,11,11,12,12,12,12,12))
+pairmap
+
+## Step 2: Fit the model
+mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=2, ParInits=ParInits, pairmap=pairmap, iter=500)
+
+## Step 3: Extract the estimated results 
+# 3.1 Extract the theta estimates 
+theta <- extract(x=mod, pars='theta')
+# Turn the theta estimates into p*trait matrix where p equals sample size and trait equals the number of latent traits
+theta <- theta[,1]
+# nrow=trait
+theta <- matrix(theta, nrow=5)  
+theta <- t(theta)
+# theta estimates in p*trait matrix format
+#first 10 respondents' thetas
+theta[1:10,]
+# 3.2 Extract the tau estimates
+tau <- extract(x=mod, pars='tau')
+tau <- tau[,1]
+tau
+#3.3 Extract the estimates of the correlations among dimensions
+cor <- extract(x=mod, pars='cor')
+
+## Step 4: Plottings
+# 4.1 Obtain the density plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='density', inc_warmup=FALSE)
+# 4.2 Obtain the trace plots for alphas of the first four statements
+bayesplot(x=mod, pars=paste0("alpha[",1:4,"]"), plot='trace', inc_warmup=FALSE)
 ```
