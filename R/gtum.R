@@ -68,17 +68,17 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
           Delta.Ind[i]=mdpo
           Delta.Std[i]=vdpo
           Delta.lower[i]=0
-          Delta.upper[i]=10}
+          Delta.upper[i]=5}
         else if(Delta.Ind.0[i] < 0) {
           Delta.Ind[i]=mdne
           Delta.Std[i]=vdne
-          Delta.lower[i]=-10
+          Delta.lower[i]=-5
           Delta.upper[i]=0}
         else{
           Delta.Ind[i]=mdnu
           Delta.Std[i]=vdnu
-          Delta.lower[i]=-10
-          Delta.upper[i]=10}
+          Delta.lower[i]=-5
+          Delta.upper[i]=5}
       }
 
 
