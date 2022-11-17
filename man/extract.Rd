@@ -22,7 +22,7 @@ This function extracts estimation results.
 Data <- c(1,5)
 Data <- matrix(Data,nrow = 1)
 ind <- matrix(c(1, 1, 2, 3), ncol = 2)
-ParInits <- matrix(c(-1, -1, -1, -1), ncol = 2)
+ParInits <- matrix(c(1, 1, 1, 1, -1, -1, -1, -1), ncol = 2)
 mod <- gtum(gtum.Data=Data,ind=ind,ParInits=ParInits,block=2,iter=3,warmup=1,chains=1)
 alpha <- extract(mod, 'alpha')}
 }

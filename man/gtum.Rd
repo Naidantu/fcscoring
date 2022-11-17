@@ -36,7 +36,7 @@ gtum(
 
 \item{ind}{A two-column matrix mapping each statement to each trait in the pair format. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.}
 
-\item{ParInits}{A three-column matrix containing initial values for the statement parameters block by block. 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.}
+\item{ParInits}{A two-column matrix containing initial values for the statement parameters alpha and delta block by block. 1 for alphas is recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.}
 
 \item{block}{The number of statements in each block in the original test. For now, it can be 2 or 3. We will further expand the code to incorporate bigger blocks.}
 
@@ -91,6 +91,6 @@ This function implements full Bayesian estimation of the Generalized Thurstonian
 Data <- c(1,5)
 Data <- matrix(Data,nrow = 1)
 ind <- matrix(c(1, 1, 2, 3), ncol = 2)
-ParInits <- matrix(c(-1, -1, -1, -1), ncol = 2)
+ParInits <- matrix(c(1, 1, 1, 1, -1, -1, -1, -1), ncol = 2)
 mod <- gtum(gtum.Data=Data,ind=ind,ParInits=ParInits,block=2,iter=3,warmup=1,chains=1)}
 }

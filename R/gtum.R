@@ -2,7 +2,7 @@
 #' @description This function implements full Bayesian estimation of the Generalized Thurstonian Unfolding Model using rstan
 #' @param gtum.Data Response data in wide format (each row represents a person). If the original block size is three or more, then users need to first decompose the original responses into several pairwise comparisons and use the pairwise comparison data as input here. For example, if the original test has 3 blocks and each block contains statements A, B, and C, then the input data should have 9 columns (A1B1, A1C1, B1C1, A2B2, A2C2, B2C2, A3B3, A3C3, B3C3) where 1 means the first statement within the pair is preferred and 2 means the second statement within the pair is preferred. For graded preference forced-choice design, the data should be coded as the response option endorsed (e.g., 1= Statement A is much more like me; 2= Statement A is slightly more like me; 3= Statement B is slightly more like me; 4= Statement B is much more like me).
 #' @param ind A two-column matrix mapping each statement to each trait in the pair format. For example, matrix(c(1, 1, 1, 2, 2, 2), ncol = 2) means that for each pair, the first statement measures trait 1 and the second statement measures trait 2.
-#' @param ParInits A three-column matrix containing initial values for the statement parameters block by block. 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.
+#' @param ParInits A two-column matrix containing initial values for the statement parameters alpha and delta block by block. 1 for alphas is recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements. Pre-estimated statement parameters can be used as the initial values for scoring purpose.
 #' @param block The number of statements in each block in the original test. For now, it can be 2 or 3. We will further expand the code to incorporate bigger blocks.
 #' @param pairmap A two-column matrix specifying the ID of statements within each trait. The row of this matrix equals to the total number of pairwise comparisons. For example, for a 20-block tests with 3 statements per block, there will be 20*(3*(3-1)/2) = 60 pairwise comparisons. Suppose there are 12 statements measuring each trait. Then 1 means the statement is the first statement measuring the trait and 12 means the statement is the twelfth statement measuring the trait.
 #' @param covariate An p*c person covariate matrix where p equals sample size and c equals the number of covariates. The default is NULL, meaning no person covariate.
@@ -30,7 +30,7 @@
 #' Data <- c(1,5)
 #' Data <- matrix(Data,nrow = 1)
 #' ind <- matrix(c(1, 1, 2, 3), ncol = 2)
-#' ParInits <- matrix(c(-1, -1, -1, -1), ncol = 2)
+#' ParInits <- matrix(c(1, 1, 1, 1, -1, -1, -1, -1), ncol = 2)
 #' mod <- gtum(gtum.Data=Data,ind=ind,ParInits=ParInits,block=2,iter=3,warmup=1,chains=1)}
 #' @export
 gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, iter=2000, chains=2,
@@ -87,7 +87,7 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
 
       #initial values
       init <- function() {
-        list(alpha=ParInits[,1], delta=ParInits[,2], tau=ParInits[,3])
+        list(alpha=ParInits[,1], delta=ParInits[,2])
       }
 
       Stan.data <- list(y = Data$y,
@@ -203,7 +203,7 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
       #              list(alpha_raw=rep(1.50,Data$I),delta_1=Delta.Ind))
 
       init <- function() {
-        list(alpha=ParInits[,1], delta=ParInits[,2], tau=ParInits[,3])
+        list(alpha=ParInits[,1], delta=ParInits[,2])
       }
 
       Stan.data <- list(y = Data$y,

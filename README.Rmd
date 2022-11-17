@@ -130,9 +130,9 @@ ind <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
                                          2,2,4,1,1,3))
 ind
 
-# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
-# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
-ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), rep(-1,60)), ncol = 3)
+# 1.3 A two-column matrix containing initial values for the statement parameters alpha and delta block by block. 
+# 1 for alphas is recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), ncol = 2))
 ParInits
 
 ## Step 2: Fit the model
@@ -251,9 +251,9 @@ ind <- data.frame(statement1 = c(rep(1,6),rep(2,6),rep(3,6),rep(4,6),rep(5,6)),
                                          2,2,4,1,1,3))
 ind
 
-# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
-# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
-ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), rep(-1,60)), ncol = 3)
+# 1.3 A two-column matrix containing initial values for the statement parameters alpha and delta block by block. 
+# 1 for alphas is recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), rep(c(-1,-1,-1,-1,-1,-1,1,1,1,1,1,1), 5), ncol = 2))
 ParInits
 
 ## Step 2: Fit the model
@@ -427,9 +427,9 @@ ind <- data.frame(dim.1 = c(1,1,2,3,3,4,5,5,2,4,4,5,3,3,1,5,5,2,2,2,1,4,4,5,5,5,
                   dim.2 = c(2,5,5,4,1,1,2,3,3,5,1,1,1,2,2,2,4,4,1,3,3,5,2,2,1,3,3,1,2,2,3,4,4,3,5,5,1,4,4,4,5,5,5,1,1,1,3,3,3,5,5,2,5,5,4,1,1,3,2,2))
 ind
 
-# 1.3 A three-column matrix containing initial values for the statement parameters block by block.
-# 1 and -1 for alphas and taus are recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
-ParInits <- matrix(c(rep(1,60), c(rep(-1,30),rep(1,30)), rep(-1,60)), ncol = 3)
+# 1.3 A two-column matrix containing initial values for the statement parameters alpha and delta block by block. 
+# 1 for alphas is recommended and -1/-2 or 1/2 for deltas are recommended depending on the signs of the statements.
+ParInits <- matrix(c(rep(1,60), c(rep(-1,30),rep(1,30)), ncol = 2))
 ParInits
 
 # Please note that if the original test format is triplets, a pairmap file that specifies the rank/ID of the statement in each trait it measures for the recoded pair format. For example, suppose there are 3 statements measuring each trait. 1 means the statement is the first statement measuring the trait and 3 means the statement is the last statement measuring the trait.
