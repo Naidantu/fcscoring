@@ -175,7 +175,7 @@ gtum <- function(gtum.Data, ind, ParInits, block, pairmap=NULL, covariate=NULL, 
       Data<-suppressWarnings(edstan::irt_data(response_matrix =gtum.Data))
 
       #Delta.Ind.0 <- as.matrix(c(t(ParInits)))    #Statements in triplet format are estimated row by row
-      Delta.Ind.0 <- as.matrix(ParInits[,2])    #Statements in triplet format are estimated block by block
+      Delta.Ind.0 <- c(ParInits[,2])    #Statements in triplet format are estimated block by block
 
       Delta.Ind <- Delta.upper <- Delta.lower <- Delta.Std<- numeric(Data$I)
 
