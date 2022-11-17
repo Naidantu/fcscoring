@@ -440,7 +440,7 @@ pairmap <- data.frame(ino.1 = c(1,1,1,1,1,1,2,2,2,2,2,3,3,3,4,4,4,4,5,5,5,4,4,5,
 pairmap
 
 ## Step 2: Fit the model
-mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=2, ParInits=ParInits, pairmap=pairmap, iter=500)
+mod <- gtum(gtum.Data=gtum.Data, ind=ind, block=3, ParInits=ParInits, pairmap=pairmap, iter=500)
 
 ## Step 3: Extract the estimated results 
 # 3.1 Extract the theta estimates 
